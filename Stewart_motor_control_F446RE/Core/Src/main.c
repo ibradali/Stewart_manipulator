@@ -34,8 +34,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define I2C
-//#define RF
+//#define I2C
+#define RF
 
 /* USER CODE END PD */
 
@@ -173,7 +173,8 @@ int main(void)
 #endif
 
 #ifdef RF
-	  if (NRF24_Receive(RxData) == 1) {
+	  if (isDataAvailable(1) == 1) {
+		  NRF24_Receive(RxData);
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
@@ -183,7 +184,7 @@ int main(void)
 	  speed_control();
 	  control_motors();
 
-	  HAL_Delay(10);
+	  HAL_Delay(100);
 
 
 
@@ -747,7 +748,7 @@ void Error_Handler(void)
   while (1)
   {
 	  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
-	  Delay(100);
+	  HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }
