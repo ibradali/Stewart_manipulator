@@ -81,6 +81,10 @@ void Error_Handler(void);
 #define C5_In1_GPIO_Port GPIOB
 #define C5_In2_Pin GPIO_PIN_1
 #define C5_In2_GPIO_Port GPIOB
+#define CE_Pin GPIO_PIN_2
+#define CE_GPIO_Port GPIOB
+#define CSN_Pin GPIO_PIN_10
+#define CSN_GPIO_Port GPIOB
 #define C4_In2_Pin GPIO_PIN_12
 #define C4_In2_GPIO_Port GPIOB
 #define C4_In1_Pin GPIO_PIN_13
