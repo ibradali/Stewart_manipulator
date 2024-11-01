@@ -34,6 +34,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define I2C
+//#define RF
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -63,7 +66,9 @@ uint16_t mot_control_signal[6][3];
 
 uint8_t adc_ready;
 
-
+#ifdef RF
+	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
+#endif
 
 /* USER CODE END PV */
 
@@ -135,6 +140,11 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
 
+#ifdef RF
+  	  NRF24_Init();
+  	  NRF24_RxMode(RF_address, 1);
+#endif
+
 
   /* USER CODE END 2 */
 
@@ -155,13 +165,23 @@ int main(void)
 
 	  }
 
+#ifdef I2C
 	  if (HAL_I2C_Slave_Receive(&hi2c1, RxData, sizeof(RxData), 200) == HAL_OK) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
+#endif
+
+#ifdef RF
+	  if (NRF24_Receive(RxData) == 1) {
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  }
+
+#endif
+
 	  unpack_data();
-
-
+	  speed_control();
+	  control_motors();
 
 	  HAL_Delay(10);
 
@@ -675,7 +695,6 @@ void speed_control(void) {
 
 		}
 	}
-
 }
 
 
@@ -724,9 +743,11 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
+
   while (1)
   {
+	  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
+	  Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }

@@ -36,6 +36,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+//#define I2C
+#define RF
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,6 +71,9 @@ uint8_t adc_ready;
 uint16_t target_pot[6];
 uint8_t TxData[12];
 
+#ifdef RF
+	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
+#endif
 
 /* USER CODE END PV */
 
@@ -140,6 +147,13 @@ int main(void)
   adc_ready = 0;
 
 
+#ifdef RF
+  	  NRF24_Init();
+  	  nrf24_reset(RF_address);
+  	  NRF24_TxMode(RF_address, 1);
+#endif
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -184,11 +198,22 @@ int main(void)
 
 	  pack_data();
 
+#ifdef I2C
+
 	  if (HAL_I2C_Master_Transmit(&hi2c2, 0x00, TxData, sizeof(TxData), 200) == HAL_OK) {
 
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
+#endif
 
+
+#ifdef RF
+
+	  if (NRF24_Transmit(TxData) == 1) {
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  }
+
+#endif
 
 
 	  HAL_Delay(30);
