@@ -92,6 +92,7 @@ float adc_raw_to_joystick(uint16_t adc_raw);
 void debug_platform(stewart* stewart, uint8_t verbose);
 uint16_t c_length_to_pot_value(float cylinder_length);
 void pack_data();
+uint8_t lost_packets;
 
 /* USER CODE END PFP */
 
@@ -149,7 +150,7 @@ int main(void)
 
 #ifdef RF
   	  NRF24_Init();
-  	  nrf24_reset(RF_address);
+  	  nrf24_reset(2);
   	  NRF24_TxMode(RF_address, 1);
 #endif
 
@@ -209,6 +210,7 @@ int main(void)
 
 #ifdef RF
 
+	  lost_packets = nrf24_ReadReg(0x08);
 	  if (NRF24_Transmit(TxData) == 1) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
@@ -216,7 +218,7 @@ int main(void)
 #endif
 
 
-	  HAL_Delay(30);
+	  HAL_Delay(500);
 
 
     /* USER CODE END WHILE */
