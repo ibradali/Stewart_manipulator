@@ -37,6 +37,7 @@
 /* USER CODE BEGIN PD */
 
 #define I2C
+#define OLED
 //#define RF
 
 
@@ -70,6 +71,11 @@ uint8_t adc_ready;
 
 uint16_t target_pot[6];
 uint8_t TxData[12];
+
+
+#ifdef OLED
+
+#endif
 
 #ifdef RF
 	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
@@ -154,6 +160,10 @@ int main(void)
   	  NRF24_TxMode(RF_address, 1);
 #endif
 
+#ifdef OLED
+  	  disp_init();
+#endif
+
 
   /* USER CODE END 2 */
 
@@ -205,6 +215,12 @@ int main(void)
 
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
+#endif
+
+
+#ifdef OLED
+	  display_strig(1, "hello world");
+	  disp_data();
 #endif
 
 
