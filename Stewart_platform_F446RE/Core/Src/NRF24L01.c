@@ -231,7 +231,6 @@ void NRF24_Init (void)
 	// disable the chip before configuring the device
 	CE_Disable();
 
-
 	// reset everything
 	nrf24_reset (0);
 
@@ -247,7 +246,7 @@ void NRF24_Init (void)
 
 	nrf24_WriteReg (RF_CH, 0);  // will be setup during Tx or RX
 
-	nrf24_WriteReg (RF_SETUP, 0x06);   // Power= 0db, data rate = 2Mbps
+	nrf24_WriteReg (RF_SETUP, 0x00);   // Power= 0db, data rate = 2Mbps
 
 	// Enable the chip after configuring the device
 	CE_Enable();
@@ -270,7 +269,7 @@ void NRF24_TxMode (uint8_t *Address, uint8_t channel)
 	// power up the device
 	uint8_t config = nrf24_ReadReg(CONFIG);
 	config = config & (0xF2);    // write 0 in the PRIM_RX, and 1 in the PWR_UP, and all other bits are masked
-	nrf24_WriteReg (CONFIG, config);
+	nrf24_WriteReg(CONFIG, config);
 
 	// Enable the chip after configuring the device
 	CE_Enable();
@@ -288,8 +287,10 @@ uint8_t NRF24_Transmit (uint8_t *data)
 
 	// check the FIFO status
 	fifostatus = nrf24_ReadReg(FIFO_STATUS);
-	if ( (fifostatus&(1<<5))) {
 
+	if ( (fifostatus&(1<<5))) {
+		cmdtosend = FLUSH_TX;
+		nrfsendCmd(cmdtosend);
 		return 0;
 	}
 
