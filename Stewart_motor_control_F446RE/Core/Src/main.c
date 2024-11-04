@@ -34,6 +34,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+//#define I2C
+#define RF
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -63,7 +66,9 @@ uint16_t mot_control_signal[6][3];
 
 uint8_t adc_ready;
 
-
+#ifdef RF
+	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
+#endif
 
 /* USER CODE END PV */
 
@@ -135,6 +140,11 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
 
+#ifdef RF
+  	  NRF24_Init();
+  	  NRF24_RxMode(RF_address, 1);
+#endif
+
 
   /* USER CODE END 2 */
 
@@ -155,15 +165,26 @@ int main(void)
 
 	  }
 
+#ifdef I2C
 	  if (HAL_I2C_Slave_Receive(&hi2c1, RxData, sizeof(RxData), 200) == HAL_OK) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
+#endif
+
+#ifdef RF
+	  if (isDataAvailable(1) == 1) {
+		  NRF24_Receive(RxData);
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  }
+
+#endif
+
 	  unpack_data();
+	  speed_control();
+	  control_motors();
 
-
-
-	  HAL_Delay(10);
+	  HAL_Delay(100);
 
 
 
@@ -588,8 +609,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, C5_In1_Pin|C5_In2_Pin|C4_In2_Pin|C4_In1_Pin
-                          |C3_In2_Pin|C3_In1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, C5_In1_Pin|C5_In2_Pin|CE_Pin|CSN_Pin
+                          |C4_In2_Pin|C4_In1_Pin|C3_In2_Pin|C3_In1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : C6_In1_Pin C6_In2_Pin C2_In2_Pin C2_In1_Pin
                            C1_In2_Pin C1_In1_Pin */
@@ -607,10 +628,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : C5_In1_Pin C5_In2_Pin C4_In2_Pin C4_In1_Pin
-                           C3_In2_Pin C3_In1_Pin */
-  GPIO_InitStruct.Pin = C5_In1_Pin|C5_In2_Pin|C4_In2_Pin|C4_In1_Pin
-                          |C3_In2_Pin|C3_In1_Pin;
+  /*Configure GPIO pins : C5_In1_Pin C5_In2_Pin CE_Pin CSN_Pin
+                           C4_In2_Pin C4_In1_Pin C3_In2_Pin C3_In1_Pin */
+  GPIO_InitStruct.Pin = C5_In1_Pin|C5_In2_Pin|CE_Pin|CSN_Pin
+                          |C4_In2_Pin|C4_In1_Pin|C3_In2_Pin|C3_In1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -675,7 +696,6 @@ void speed_control(void) {
 
 		}
 	}
-
 }
 
 
@@ -724,9 +744,11 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
+
   while (1)
   {
+	  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
+	  HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }
