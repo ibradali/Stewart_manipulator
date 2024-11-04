@@ -36,8 +36,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-//#define I2C
-#define RF
+#define I2C
+//#define RF
 
 
 /* USER CODE END PD */
