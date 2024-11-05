@@ -1,0 +1,6 @@
+../Core/Src/sh1106.c:162:6:send_command	32	static
+../Core/Src/sh1106.c:176:6:draw_point	24	static
+../Core/Src/sh1106.c:187:6:disp_data	160	static
+../Core/Src/sh1106.c:212:6:display_string	32	static
+../Core/Src/sh1106.c:239:6:buff_init	16	static
+../Core/Src/sh1106.c:253:6:disp_init	8	static

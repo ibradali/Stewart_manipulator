@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include "../stewart/stewart.h"
 #include "NRF24L01.h"
+#include "sh1106.h"
 
 /* USER CODE END Includes */
 
@@ -39,6 +40,7 @@
 #define I2C
 #define OLED
 //#define RF
+//#define S_DEBUG
 
 
 /* USER CODE END PD */
@@ -60,10 +62,6 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-
-uint8_t uart_buffer[50];
-
-
 uint16_t adc_raw[6];
 float joyx, joyy, joyz, joyrot_x, joyrot_y, joyrot_z;
 
@@ -73,9 +71,10 @@ uint16_t target_pot[6];
 uint8_t TxData[12];
 
 
-#ifdef OLED
-
+#ifdef S_DEBUG
+	uint8_t uart_buffer[50];
 #endif
+
 
 #ifdef RF
 	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
@@ -98,7 +97,7 @@ float adc_raw_to_joystick(uint16_t adc_raw);
 void debug_platform(stewart* stewart, uint8_t verbose);
 uint16_t c_length_to_pot_value(float cylinder_length);
 void pack_data();
-uint8_t lost_packets;
+
 
 /* USER CODE END PFP */
 
@@ -219,8 +218,13 @@ int main(void)
 
 
 #ifdef OLED
-	  display_strig(1, "hello world");
+	  display_string(1, "hello world");
 	  disp_data();
+#endif
+
+
+#ifdef S_DEBUG
+	  sprintf()
 #endif
 
 

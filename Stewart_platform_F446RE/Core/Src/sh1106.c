@@ -3,7 +3,7 @@
 #include "sh1106.h"
 
 
-extern I2C_HandleTypeDef hi2c1;
+extern I2C_HandleTypeDef hi2c2;
 
 static uint8_t buffer[8][132];
 
@@ -166,7 +166,7 @@ void send_command(uint8_t command) {
 
 	uint8_t buff[2] = {control, command};
 
-	if (HAL_I2C_Master_Transmit(&hi2c1, SH1106_DEV_ADDR, buff, 2, 100) != HAL_OK) {
+	if (HAL_I2C_Master_Transmit(&hi2c2, SH1106_DEV_ADDR, buff, 2, 100) != HAL_OK) {
 		Error_Handler();
 	}
 
@@ -201,7 +201,7 @@ void disp_data(void) {
 			page_buff[column+1] = buffer[page][column];
 		}
 
-		if( HAL_I2C_Master_Transmit(&hi2c1, SH1106_DEV_ADDR , page_buff, 133, 10) != HAL_OK) {
+		if( HAL_I2C_Master_Transmit(&hi2c2, SH1106_DEV_ADDR , page_buff, 133, 10) != HAL_OK) {
 			Error_Handler();
 		}
 	}
@@ -253,7 +253,7 @@ void buff_init(void) {
 void disp_init(void) {
 
 
-	if (HAL_I2C_IsDeviceReady(&hi2c1, SH1106_DEV_ADDR, 1, 1000) != HAL_OK) {
+	if (HAL_I2C_IsDeviceReady(&hi2c2, SH1106_DEV_ADDR, 1, 1000) != HAL_OK) {
 		Error_Handler();
 	}
 
