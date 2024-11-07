@@ -58,7 +58,7 @@ I2C_HandleTypeDef hi2c2;
 
 SPI_HandleTypeDef hspi1;
 
-UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
@@ -72,7 +72,11 @@ uint8_t TxData[12];
 
 
 #ifdef S_DEBUG
-	uint8_t uart_buffer[50];
+	uint8_t uart_buffer[100];
+#endif
+
+#ifdef OLED
+	oled_tx_buffer[16];
 #endif
 
 
@@ -88,13 +92,13 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_I2C2_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 void move_target_position(stewart* stewart);
 float adc_raw_to_joystick(uint16_t adc_raw);
-void debug_platform(stewart* stewart, uint8_t verbose);
+void debug_platform(stewart* stewart, uint8_t output_type);
 uint16_t c_length_to_pot_value(float cylinder_length);
 void pack_data();
 
@@ -147,8 +151,8 @@ int main(void)
   MX_DMA_Init();
   MX_ADC1_Init();
   MX_SPI1_Init();
-  MX_USART1_UART_Init();
   MX_I2C2_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   adc_ready = 0;
 
@@ -210,21 +214,26 @@ int main(void)
 
 #ifdef I2C
 
+	  // sending commands via I2C
 	  if (HAL_I2C_Master_Transmit(&hi2c2, 0x00, TxData, sizeof(TxData), 200) == HAL_OK) {
-
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 #endif
 
 
 #ifdef OLED
-	  display_string(1, "hello world");
+	  sprintf(oled_tx_buffer, "x: %.2f, rotx: %.2f", platform.tp_target_pos[0], platform.tp_target_pos[3]);
+	  display_string(1, oled_tx_buffer);
+	  sprintf(oled_tx_buffer, "y: %.2f, roty: %.2f", platform.tp_target_pos[1], platform.tp_target_pos[4]);
+	  display_string(2, oled_tx_buffer);
+	  sprintf(oled_tx_buffer, "z: %.2f, rotz: %.2f", platform.tp_target_pos[2], platform.tp_target_pos[5]);
+	  display_string(2, oled_tx_buffer);
 	  disp_data();
 #endif
 
 
 #ifdef S_DEBUG
-	  sprintf()
+	  debug_platform(&platform, 0)
 #endif
 
 
@@ -238,7 +247,7 @@ int main(void)
 #endif
 
 
-	  HAL_Delay(500);
+	  HAL_Delay(20);
 
 
     /* USER CODE END WHILE */
@@ -360,7 +369,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = 3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -369,7 +378,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Channel = ADC_CHANNEL_8;
   sConfig.Rank = 4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -378,7 +387,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Channel = ADC_CHANNEL_9;
   sConfig.Rank = 5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -387,7 +396,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Channel = ADC_CHANNEL_10;
   sConfig.Rank = 6;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -472,35 +481,35 @@ static void MX_SPI1_Init(void)
 }
 
 /**
-  * @brief USART1 Initialization Function
+  * @brief USART2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_USART1_UART_Init(void)
+static void MX_USART2_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART1_Init 0 */
+  /* USER CODE BEGIN USART2_Init 0 */
 
-  /* USER CODE END USART1_Init 0 */
+  /* USER CODE END USART2_Init 0 */
 
-  /* USER CODE BEGIN USART1_Init 1 */
+  /* USER CODE BEGIN USART2_Init 1 */
 
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART1_Init 2 */
+  /* USER CODE BEGIN USART2_Init 2 */
 
-  /* USER CODE END USART1_Init 2 */
+  /* USER CODE END USART2_Init 2 */
 
 }
 
@@ -533,9 +542,9 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
@@ -644,16 +653,30 @@ float adc_raw_to_joystick(uint16_t adc_raw) {
 }
 
 
-void debug_platform(stewart* stewart, uint8_t verbose) {
+void debug_platform(stewart* stewart, uint8_t output_type) {
 
-	if (verbose == 0) {
+	if (output_type == 0) {
+		uint8_t buf_len = sprintf((char *) uart_buffer, "x: %.2f, y: %.2f, z: %.2f thetax: %.2f thetay: %.2f thetaz: %.2f \n\r",
+				stewart->tp_target_pos[0], stewart->tp_target_pos[1], stewart->tp_target_pos[2],
+				stewart->tp_target_pos[3], stewart->tp_target_pos[4], stewart->tp_target_pos[5]);
+
+		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
 
 	}
 
-	else if (verbose == 1) {
+	else if (output_type == 1) {
 
-		sprintf((char *) uart_buffer, "x: %f, y: %f, z: %f \n\r", stewart->tp_target_pos[0], stewart->tp_target_pos[1], stewart->tp_target_pos[2]);
-		HAL_UART_Transmit(&huart1, uart_buffer, sizeof(uart_buffer), 1000);
+		uint8_t buf_len = sprintf((char *) uart_buffer, "l1:%.2f, l2:%.2f, l3:%f, l4:%.2f, l5:%.2f l6:%.2f  \n\r",
+				stewart->c_target[0], stewart->c_target[1], stewart->c_target[2],
+				stewart->c_target[3], stewart->c_target[4], stewart->c_target[5]);
+
+		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
+	}
+	else if (output_type == 2) {
+		uint8_t buf_len = sprintf((char *) uart_buffer,
+				"target pot1:%.2f, target pot2:%.2f, target pot3:%f, target pot4:%.2f, target pot5:%.2f target pot6:%.2f  \n\r",
+					target_pot[0], target_pot[1], target_pot[2],
+					target_pot[3], target_pot[4], target_pot[5]);
 	}
 
 }
