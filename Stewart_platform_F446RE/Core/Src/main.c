@@ -38,7 +38,7 @@
 /* USER CODE BEGIN PD */
 
 #define I2C
-#define OLED
+//#define OLED
 //#define RF
 //#define S_DEBUG
 
@@ -227,7 +227,7 @@ int main(void)
 	  sprintf(oled_tx_buffer, "y: %.2f, roty: %.2f", platform.tp_target_pos[1], platform.tp_target_pos[4]);
 	  display_string(2, oled_tx_buffer);
 	  sprintf(oled_tx_buffer, "z: %.2f, rotz: %.2f", platform.tp_target_pos[2], platform.tp_target_pos[5]);
-	  display_string(2, oled_tx_buffer);
+	  display_string(3, oled_tx_buffer);
 	  disp_data();
 #endif
 
@@ -661,7 +661,6 @@ void debug_platform(stewart* stewart, uint8_t output_type) {
 				stewart->tp_target_pos[3], stewart->tp_target_pos[4], stewart->tp_target_pos[5]);
 
 		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
-
 	}
 
 	else if (output_type == 1) {
@@ -677,6 +676,8 @@ void debug_platform(stewart* stewart, uint8_t output_type) {
 				"target pot1:%.2f, target pot2:%.2f, target pot3:%f, target pot4:%.2f, target pot5:%.2f target pot6:%.2f  \n\r",
 					target_pot[0], target_pot[1], target_pot[2],
 					target_pot[3], target_pot[4], target_pot[5]);
+
+		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
 	}
 
 }
