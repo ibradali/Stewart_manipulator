@@ -218,6 +218,9 @@ int main(void)
 	  if (HAL_I2C_Master_Transmit(&hi2c2, 0x00, TxData, sizeof(TxData), 200) == HAL_OK) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
+
+	  HAL_I2C_Master_Transmit(&hi2c2, 0x05<<1, TxData, sizeof(TxData), 100);
+
 #endif
 
 
@@ -653,6 +656,8 @@ float adc_raw_to_joystick(uint16_t adc_raw) {
 }
 
 
+#ifdef S_DEBUG
+
 void debug_platform(stewart* stewart, uint8_t output_type) {
 
 	if (output_type == 0) {
@@ -681,6 +686,8 @@ void debug_platform(stewart* stewart, uint8_t output_type) {
 	}
 
 }
+
+#endif
 
 
 uint16_t c_length_to_pot_value(float cylinder_length) {
