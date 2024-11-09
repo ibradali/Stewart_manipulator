@@ -61,8 +61,8 @@ all: main-build
 main-build: Stewart_platform_F446RE.elf secondary-outputs
 
 # Tool invocations
-Stewart_platform_F446RE.elf Stewart_platform_F446RE.map: $(OBJS) $(USER_OBJS) /Users/ibrahimdaliabo/Documents/GitHub/Stewart_manipulator/Stewart_platform_F446RE/STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Stewart_platform_F446RE.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/ibrahimdaliabo/Documents/GitHub/Stewart_manipulator/Stewart_platform_F446RE/STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Stewart_platform_F446RE.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+Stewart_platform_F446RE.elf Stewart_platform_F446RE.map: $(OBJS) $(USER_OBJS) D:\Github\Stewart_manipulator\Stewart_platform_F446RE\STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Stewart_platform_F446RE.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Github\Stewart_manipulator\Stewart_platform_F446RE\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Stewart_platform_F446RE.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

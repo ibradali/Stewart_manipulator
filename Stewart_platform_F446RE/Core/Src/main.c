@@ -219,7 +219,9 @@ int main(void)
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
-	  HAL_I2C_Master_Transmit(&hi2c2, 0x05<<1, TxData, sizeof(TxData), 100);
+	  if (HAL_I2C_Master_Transmit(&hi2c2, (0x01<<1), TxData, sizeof(TxData), 100) == HAL_OK) {
+		  //HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  }
 
 #endif
 
@@ -250,7 +252,7 @@ int main(void)
 #endif
 
 
-	  HAL_Delay(20);
+	  HAL_Delay(100);
 
 
     /* USER CODE END WHILE */
