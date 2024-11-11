@@ -40,7 +40,7 @@
 #define I2C
 //#define OLED
 //#define RF
-//#define S_DEBUG
+#define S_DEBUG
 
 
 /* USER CODE END PD */
@@ -202,7 +202,6 @@ int main(void)
 	  run_platform(&platform);
 
 
-
 	  target_pot[0] = c_length_to_pot_value(platform.c_target[0]);
 	  target_pot[1] = c_length_to_pot_value(platform.c_target[1]);
 	  target_pot[2] = c_length_to_pot_value(platform.c_target[2]);
@@ -220,7 +219,7 @@ int main(void)
 	  }
 
 	  if (HAL_I2C_Master_Transmit(&hi2c2, (0x01<<1), TxData, sizeof(TxData), 100) == HAL_OK) {
-		  //HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
 #endif
@@ -238,7 +237,7 @@ int main(void)
 
 
 #ifdef S_DEBUG
-	  debug_platform(&platform, 0)
+	  debug_platform(&platform, 1);
 #endif
 
 
@@ -564,6 +563,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : Suction_enable_Pin */
+  GPIO_InitStruct.Pin = Suction_enable_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(Suction_enable_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Motor_Enable_Pin */
+  GPIO_InitStruct.Pin = Motor_Enable_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(Motor_Enable_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : CE_Pin CSN_Pin */
   GPIO_InitStruct.Pin = CE_Pin|CSN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -680,7 +691,7 @@ void debug_platform(stewart* stewart, uint8_t output_type) {
 	}
 	else if (output_type == 2) {
 		uint8_t buf_len = sprintf((char *) uart_buffer,
-				"target pot1:%.2f, target pot2:%.2f, target pot3:%f, target pot4:%.2f, target pot5:%.2f target pot6:%.2f  \n\r",
+				"t pot1:%d, t pot2:%d, t pot3:%d, t pot4:%d, t pot5:%d t pot6:%d  \n\r",
 					target_pot[0], target_pot[1], target_pot[2],
 					target_pot[3], target_pot[4], target_pot[5]);
 
