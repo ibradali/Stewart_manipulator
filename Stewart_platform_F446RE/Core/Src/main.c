@@ -73,6 +73,15 @@ uint8_t TxData[12];
 
 #ifdef S_DEBUG
 	uint8_t uart_buffer[100];
+
+	enum debug_type {
+		target_pos,
+		target_c_length,
+		target_pot_val,
+		joystick_input
+
+	};
+
 #endif
 
 #ifdef OLED
@@ -237,7 +246,7 @@ int main(void)
 
 
 #ifdef S_DEBUG
-	  debug_platform(&platform, 1);
+	  debug_platform(&platform, target_pos);
 #endif
 
 
@@ -673,7 +682,7 @@ float adc_raw_to_joystick(uint16_t adc_raw) {
 
 void debug_platform(stewart* stewart, uint8_t output_type) {
 
-	if (output_type == 0) {
+	if (output_type == target_pos) {
 		uint8_t buf_len = sprintf((char *) uart_buffer, "x: %.2f, y: %.2f, z: %.2f thetax: %.2f thetay: %.2f thetaz: %.2f \n\r",
 				stewart->tp_target_pos[0], stewart->tp_target_pos[1], stewart->tp_target_pos[2],
 				stewart->tp_target_pos[3], stewart->tp_target_pos[4], stewart->tp_target_pos[5]);
@@ -681,7 +690,7 @@ void debug_platform(stewart* stewart, uint8_t output_type) {
 		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
 	}
 
-	else if (output_type == 1) {
+	else if (output_type == target_c_length) {
 
 		uint8_t buf_len = sprintf((char *) uart_buffer, "l1:%.2f, l2:%.2f, l3:%f, l4:%.2f, l5:%.2f l6:%.2f  \n\r",
 				stewart->c_target[0], stewart->c_target[1], stewart->c_target[2],
@@ -689,13 +698,20 @@ void debug_platform(stewart* stewart, uint8_t output_type) {
 
 		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
 	}
-	else if (output_type == 2) {
+	else if (output_type == target_pot_val) {
 		uint8_t buf_len = sprintf((char *) uart_buffer,
-				"t pot1:%d, t pot2:%d, t pot3:%d, t pot4:%d, t pot5:%d t pot6:%d  \n\r",
+				"tpot1:%d, tpot2:%d, tpot3:%d, tpot4:%d, tpot5:%d tpot6:%d  \n\r",
 					target_pot[0], target_pot[1], target_pot[2],
 					target_pot[3], target_pot[4], target_pot[5]);
 
 		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
+	}
+	else if (output_type == joystick_input) {
+		uint8_t buf_len = sprintf((char *) uart_buffer,
+						"joy x:%.2f, joy y:%.2f, joy z:%.2f, joy theta x:%.2f, joy theta y:%.2f joy theta z:%.2f \n\r",
+							joyx, joyy, joyz, joyrot_x, joyrot_y, joyrot_z);
+		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
+
 	}
 
 }
