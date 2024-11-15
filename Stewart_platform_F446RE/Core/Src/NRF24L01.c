@@ -20,6 +20,8 @@
 
 
 #include "stm32f4xx_hal.h"
+#include "main.h"
+
 #include "NRF24L01.h"
 
 extern SPI_HandleTypeDef hspi1;

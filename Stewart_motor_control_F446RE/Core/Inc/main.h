@@ -111,6 +111,8 @@ void Error_Handler(void);
 #define C4_PWM_GPIO_Port GPIOA
 #define C5_PWM_Pin GPIO_PIN_15
 #define C5_PWM_GPIO_Port GPIOA
+#define suction_enable_Pin GPIO_PIN_2
+#define suction_enable_GPIO_Port GPIOD
 #define C6_PWM_Pin GPIO_PIN_9
 #define C6_PWM_GPIO_Port GPIOB
 

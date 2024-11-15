@@ -34,8 +34,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-//#define I2C
-#define RF
+#define I2C
+//#define RF
 
 /* USER CODE END PD */
 
@@ -184,7 +184,7 @@ int main(void)
 	  speed_control();
 	  control_motors();
 
-	  HAL_Delay(100);
+	  HAL_Delay(50);
 
 
 
@@ -600,6 +600,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, C6_In1_Pin|C6_In2_Pin|C2_In2_Pin|C2_In1_Pin
@@ -611,6 +612,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, C5_In1_Pin|C5_In2_Pin|CE_Pin|CSN_Pin
                           |C4_In2_Pin|C4_In1_Pin|C3_In2_Pin|C3_In1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(suction_enable_GPIO_Port, suction_enable_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : C6_In1_Pin C6_In2_Pin C2_In2_Pin C2_In1_Pin
                            C1_In2_Pin C1_In1_Pin */
@@ -636,6 +640,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : suction_enable_Pin */
+  GPIO_InitStruct.Pin = suction_enable_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(suction_enable_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -666,7 +677,6 @@ void unpack_data(void) {
 
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-
 	adc_ready = 1;
 
 }
@@ -703,28 +713,28 @@ void control_motors(void) {
 
 
 	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[0][1]);
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[0][2]);
+	HAL_GPIO_WritePin(C1_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[0][2]);
 	TIM1->CCR1 = mot_control_signal[0][0];
 
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[1][1]);
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[1][2]);
-	TIM1->CCR1 = mot_control_signal[1][0];
+	HAL_GPIO_WritePin(C2_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[1][1]);
+	HAL_GPIO_WritePin(C2_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[1][2]);
+	TIM1->CCR2 = mot_control_signal[1][0];
 
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[2][1]);
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[2][2]);
-	TIM1->CCR1 = mot_control_signal[2][0];
+	HAL_GPIO_WritePin(C3_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[2][1]);
+	HAL_GPIO_WritePin(C3_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[2][2]);
+	TIM1->CCR3 = mot_control_signal[2][0];
 
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[3][1]);
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[3][2]);
-	TIM1->CCR1 = mot_control_signal[3][0];
+	HAL_GPIO_WritePin(C4_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[3][1]);
+	HAL_GPIO_WritePin(C4_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[3][2]);
+	TIM1->CCR4 = mot_control_signal[3][0];
 
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[4][1]);
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[4][2]);
-	TIM1->CCR1 = mot_control_signal[4][0];
+	HAL_GPIO_WritePin(C5_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[4][1]);
+	HAL_GPIO_WritePin(C5_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[4][2]);
+	TIM2->CCR1 = mot_control_signal[4][0];
 
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[5][1]);
-	HAL_GPIO_WritePin(C1_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[5][2]);
-	TIM1->CCR1 = mot_control_signal[5][0];
+	HAL_GPIO_WritePin(C6_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[5][1]);
+	HAL_GPIO_WritePin(C6_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[5][2]);
+	TIM2->CCR2 = mot_control_signal[5][0];
 
 
 }

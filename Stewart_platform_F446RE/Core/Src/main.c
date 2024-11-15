@@ -41,6 +41,7 @@
 //#define OLED
 //#define RF
 #define S_DEBUG
+//#define ESP
 
 
 /* USER CODE END PD */
@@ -68,7 +69,9 @@ float joyx, joyy, joyz, joyrot_x, joyrot_y, joyrot_z;
 uint8_t adc_ready;
 
 uint16_t target_pot[6];
-uint8_t TxData[12];
+uint8_t TxData[13];
+uint8_t home_btn = 0;
+uint8_t suction_btn = 0;
 
 
 #ifdef S_DEBUG
@@ -110,6 +113,7 @@ float adc_raw_to_joystick(uint16_t adc_raw);
 void debug_platform(stewart* stewart, uint8_t output_type);
 uint16_t c_length_to_pot_value(float cylinder_length);
 void pack_data();
+void move_platform_home(stewart* st);
 
 
 /* USER CODE END PFP */
@@ -177,6 +181,8 @@ int main(void)
 #endif
 
 
+  	  move_platform_home(&platform);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -199,7 +205,20 @@ int main(void)
 
 	  }
 
+	  home_btn = HAL_GPIO_ReadPin(Home_Button_GPIO_Port, Home_Button_Pin);
+	  suction_btn = HAL_GPIO_ReadPin(suction_enable_btn_GPIO_Port, suction_enable_btn_Pin);
+
+
+
+	  if (home_btn == 0) {
+	 		  move_platform_home(&platform);
+	 	  }
 	  move_target_position(&platform);
+
+
+
+
+
 
 	  rotate_platform(&platform, platform.a1);
 	  rotate_platform(&platform, platform.a2);
@@ -220,6 +239,7 @@ int main(void)
 
 	  pack_data();
 
+
 #ifdef I2C
 
 	  // sending commands via I2C
@@ -227,9 +247,12 @@ int main(void)
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
+#ifdef ESP
 	  if (HAL_I2C_Master_Transmit(&hi2c2, (0x01<<1), TxData, sizeof(TxData), 100) == HAL_OK) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
+
+#endif
 
 #endif
 
@@ -572,17 +595,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Suction_enable_Pin */
-  GPIO_InitStruct.Pin = Suction_enable_Pin;
+  /*Configure GPIO pin : Home_Button_Pin */
+  GPIO_InitStruct.Pin = Home_Button_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Suction_enable_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Home_Button_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Motor_Enable_Pin */
-  GPIO_InitStruct.Pin = Motor_Enable_Pin;
+  /*Configure GPIO pin : suction_enable_btn_Pin */
+  GPIO_InitStruct.Pin = suction_enable_btn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Motor_Enable_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(suction_enable_btn_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : CE_Pin CSN_Pin */
   GPIO_InitStruct.Pin = CE_Pin|CSN_Pin;
@@ -747,6 +770,20 @@ void pack_data(void) {
 
 	TxData[10] = (uint8_t) (target_pot[5] & 0xFF);
 	TxData[11] = (uint8_t) (target_pot[5] >> 8) & 0x0F;
+
+	TxData[12] = (uint8_t) suction_btn;
+
+}
+
+
+void move_platform_home(stewart* st) {
+
+	st->tp_target_pos[0] = 0;
+	st->tp_target_pos[1] = 0;
+	st->tp_target_pos[2] = 0;
+	st->tp_target_pos[3] = 0;
+	st->tp_target_pos[4] = 0;
+	st->tp_target_pos[5] = 0;
 
 }
 

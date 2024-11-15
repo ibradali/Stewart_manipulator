@@ -71,10 +71,10 @@ void Error_Handler(void);
 #define joy_rot_x_GPIO_Port GPIOB
 #define joy_rot_y_Pin GPIO_PIN_1
 #define joy_rot_y_GPIO_Port GPIOB
-#define Suction_enable_Pin GPIO_PIN_9
-#define Suction_enable_GPIO_Port GPIOC
-#define Motor_Enable_Pin GPIO_PIN_8
-#define Motor_Enable_GPIO_Port GPIOA
+#define Home_Button_Pin GPIO_PIN_8
+#define Home_Button_GPIO_Port GPIOC
+#define suction_enable_btn_Pin GPIO_PIN_9
+#define suction_enable_btn_GPIO_Port GPIOC
 #define CE_Pin GPIO_PIN_4
 #define CE_GPIO_Port GPIOB
 #define CSN_Pin GPIO_PIN_5

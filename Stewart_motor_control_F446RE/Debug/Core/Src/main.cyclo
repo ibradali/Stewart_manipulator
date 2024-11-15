@@ -9,6 +9,6 @@
 ../Core/Src/main.c:592:13:MX_GPIO_Init	1
 ../Core/Src/main.c:646:6:unpack_data	1
 ../Core/Src/main.c:668:6:HAL_ADC_ConvCpltCallback	1
-../Core/Src/main.c:677:6:speed_control	4
-../Core/Src/main.c:702:6:control_motors	1
-../Core/Src/main.c:743:6:Error_Handler	1
+../Core/Src/main.c:676:6:speed_control	4
+../Core/Src/main.c:701:6:control_motors	1
+../Core/Src/main.c:742:6:Error_Handler	1
