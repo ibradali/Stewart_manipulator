@@ -58,13 +58,16 @@ TIM_HandleTypeDef htim2;
 /* USER CODE BEGIN PV */
 
 
-uint8_t RxData[12];
+uint8_t RxData[13];
 uint16_t adc_raw[6];
-uint16_t curr_pot[6];
+uint16_t curr_pot[2][6];
 uint16_t target_pot[6];
+double i_e[6];
 uint16_t mot_control_signal[6][3];
 
 uint8_t adc_ready;
+
+uint8_t suction_signal;
 
 #ifdef RF
 	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
@@ -139,6 +142,8 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
+  float alpha = 0.4;
+
 
 #ifdef RF
   	  NRF24_Init();
@@ -155,18 +160,31 @@ int main(void)
 
 	  HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adc_raw, 6);
 
+	  // read and filter ADC values
 	  if (adc_ready) {
-		  curr_pot[0] = adc_raw[0];
-		  curr_pot[1] = adc_raw[1];
-		  curr_pot[2] = adc_raw[2];
-		  curr_pot[3] = adc_raw[3];
-		  curr_pot[4] = adc_raw[4];
-		  curr_pot[5] = adc_raw[5];
+
+		  curr_pot[0][0] = curr_pot[1][0];
+		  curr_pot[1][0] = alpha * adc_raw[0] + (1-alpha) * curr_pot[1][0];
+
+		  curr_pot[0][1] = curr_pot[1][1];
+		  curr_pot[1][1] = alpha * adc_raw[1] + (1-alpha) * curr_pot[1][1];
+
+		  curr_pot[0][2] = curr_pot[1][2];
+		  curr_pot[1][2] = alpha * adc_raw[2] + (1-alpha) * curr_pot[1][2];
+
+		  curr_pot[0][3] = curr_pot[1][3];
+		  curr_pot[1][3] = alpha * adc_raw[3] + (1-alpha) * curr_pot[1][3];
+
+		  curr_pot[0][4] = curr_pot[1][4];
+		  curr_pot[1][4] = alpha * adc_raw[4] + (1-alpha) * curr_pot[1][4];
+
+		  curr_pot[0][5] = curr_pot[1][5];
+		  curr_pot[1][5] = alpha * adc_raw[5] + (1-alpha) * curr_pot[1][5];
 
 	  }
 
 #ifdef I2C
-	  if (HAL_I2C_Slave_Receive(&hi2c1, RxData, sizeof(RxData), 200) == HAL_OK) {
+	  if (HAL_I2C_Slave_Receive(&hi2c1, RxData, sizeof(RxData), 10) == HAL_OK) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
@@ -181,10 +199,18 @@ int main(void)
 #endif
 
 	  unpack_data();
+
+	  if (suction_signal == 1) {
+		  HAL_GPIO_WritePin(suction_enable_GPIO_Port, suction_enable_Pin, 1);
+	  }
+	  else if (suction_signal == 0){
+		  HAL_GPIO_WritePin(suction_enable_GPIO_Port, suction_enable_Pin, 0);
+	  }
+
 	  speed_control();
 	  control_motors();
 
-	  HAL_Delay(50);
+	  HAL_Delay(20);
 
 
 
@@ -673,6 +699,10 @@ void unpack_data(void) {
 
 	target_pot[5] = (uint16_t) RxData[10];
 	target_pot[5] |= (uint16_t) (RxData[11]<<8);
+
+	suction_signal = (uint8_t) RxData[12];
+
+
 }
 
 
@@ -686,23 +716,45 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void speed_control(void) {
 
-	uint8_t p  = 1;
-	int error;
+
+	int m_signal;
+	uint8_t p = 2;
+	double T_i = 1/10;
+	float elapsed_time = 0.02;
+
 
 	for (int i=0; i<6;i++) {
 
-		error = p *(target_pot - curr_pot);
+		if (i_e[i] > 4096) i_e[i] = 4096;
 
-		if (error >= 0) {
-			mot_control_signal[i][0] = error;
+		else if (i_e[i] < -4096) i_e[i] = -4096;
+
+		else if (i_e[i] >= -4096 && i_e[i] <=4096) {
+
+			i_e[i] += elapsed_time * (target_pot[i] - curr_pot[1][i]);
+		}
+
+
+
+		m_signal = p * (target_pot[i] - curr_pot[1][i]) + T_i * i_e[i];
+
+		if (m_signal > 3) {
+			mot_control_signal[i][0] = m_signal;
 			mot_control_signal[i][1] = 1;
 			mot_control_signal[i][2] = 0;
 
 		}
-		else if (error < 0) {
-			mot_control_signal[i][0] = -error;
+		else if (m_signal < -3) {
+			mot_control_signal[i][0] = -m_signal;
 			mot_control_signal[i][1] = 0;
 			mot_control_signal[i][2] = 1;
+
+		}
+
+		else if (m_signal <= 3 && m_signal >=-3) {
+			mot_control_signal[i][0] = 0;
+			mot_control_signal[i][1] = 0;
+			mot_control_signal[i][2] = 0;
 
 		}
 	}
@@ -716,24 +768,24 @@ void control_motors(void) {
 	HAL_GPIO_WritePin(C1_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[0][2]);
 	TIM1->CCR1 = mot_control_signal[0][0];
 
-	HAL_GPIO_WritePin(C2_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[1][1]);
-	HAL_GPIO_WritePin(C2_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[1][2]);
+	HAL_GPIO_WritePin(C2_In1_GPIO_Port, C2_In1_Pin, mot_control_signal[1][1]);
+	HAL_GPIO_WritePin(C2_In2_GPIO_Port, C2_In2_Pin, mot_control_signal[1][2]);
 	TIM1->CCR2 = mot_control_signal[1][0];
 
-	HAL_GPIO_WritePin(C3_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[2][1]);
-	HAL_GPIO_WritePin(C3_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[2][2]);
+	HAL_GPIO_WritePin(C3_In1_GPIO_Port, C3_In1_Pin, mot_control_signal[2][1]);
+	HAL_GPIO_WritePin(C3_In2_GPIO_Port, C3_In2_Pin, mot_control_signal[2][2]);
 	TIM1->CCR3 = mot_control_signal[2][0];
 
-	HAL_GPIO_WritePin(C4_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[3][1]);
-	HAL_GPIO_WritePin(C4_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[3][2]);
+	HAL_GPIO_WritePin(C4_In1_GPIO_Port, C4_In1_Pin, mot_control_signal[3][1]);
+	HAL_GPIO_WritePin(C4_In2_GPIO_Port, C4_In2_Pin, mot_control_signal[3][2]);
 	TIM1->CCR4 = mot_control_signal[3][0];
 
-	HAL_GPIO_WritePin(C5_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[4][1]);
-	HAL_GPIO_WritePin(C5_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[4][2]);
+	HAL_GPIO_WritePin(C5_In1_GPIO_Port, C5_In1_Pin, mot_control_signal[4][1]);
+	HAL_GPIO_WritePin(C5_In2_GPIO_Port, C5_In2_Pin, mot_control_signal[4][2]);
 	TIM2->CCR1 = mot_control_signal[4][0];
 
-	HAL_GPIO_WritePin(C6_In1_GPIO_Port, C1_In1_Pin, mot_control_signal[5][1]);
-	HAL_GPIO_WritePin(C6_In2_GPIO_Port, C1_In2_Pin, mot_control_signal[5][2]);
+	HAL_GPIO_WritePin(C6_In1_GPIO_Port, C6_In1_Pin, mot_control_signal[5][1]);
+	HAL_GPIO_WritePin(C6_In2_GPIO_Port, C6_In2_Pin, mot_control_signal[5][2]);
 	TIM2->CCR2 = mot_control_signal[5][0];
 
 

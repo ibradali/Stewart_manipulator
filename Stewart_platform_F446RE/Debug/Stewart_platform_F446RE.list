@@ -1454,9 +1454,6 @@ int main(void)
  80010ce:	f000 fb07 	bl	80016e0 <move_target_position>
 
 
-
-
-
 	  rotate_platform(&platform, platform.a1);
  80010d2:	1d3b      	adds	r3, r7, #4
  80010d4:	f103 0230 	add.w	r2, r3, #48	@ 0x30
@@ -1582,9 +1579,9 @@ int main(void)
 
 
 #ifdef S_DEBUG
-	  debug_platform(&platform, target_pos);
+	  debug_platform(&platform, target_pot_val);
  80011d4:	1d3b      	adds	r3, r7, #4
- 80011d6:	2100      	movs	r1, #0
+ 80011d6:	2102      	movs	r1, #2
  80011d8:	4618      	mov	r0, r3
  80011da:	f000 fc9f 	bl	8001b1c <debug_platform>
 	  }
@@ -3232,6 +3229,7 @@ uint16_t c_length_to_pot_value(float cylinder_length) {
  8001dd8:	40790000 	.word	0x40790000
 
 08001ddc <pack_data>:
+
 
 void pack_data(void) {
  8001ddc:	b480      	push	{r7}

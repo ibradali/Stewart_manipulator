@@ -216,10 +216,6 @@ int main(void)
 	  move_target_position(&platform);
 
 
-
-
-
-
 	  rotate_platform(&platform, platform.a1);
 	  rotate_platform(&platform, platform.a2);
 	  rotate_platform(&platform, platform.a3);
@@ -269,7 +265,7 @@ int main(void)
 
 
 #ifdef S_DEBUG
-	  debug_platform(&platform, target_pos);
+	  debug_platform(&platform, target_pot_val);
 #endif
 
 
@@ -721,6 +717,7 @@ void debug_platform(stewart* stewart, uint8_t output_type) {
 
 		HAL_UART_Transmit(&huart2, uart_buffer, buf_len, 100);
 	}
+
 	else if (output_type == target_pot_val) {
 		uint8_t buf_len = sprintf((char *) uart_buffer,
 				"tpot1:%d, tpot2:%d, tpot3:%d, tpot4:%d, tpot5:%d tpot6:%d  \n\r",
@@ -750,6 +747,7 @@ uint16_t c_length_to_pot_value(float cylinder_length) {
 
 	return pot_val;
 }
+
 
 void pack_data(void) {
 
