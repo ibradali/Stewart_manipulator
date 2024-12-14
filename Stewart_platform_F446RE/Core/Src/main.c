@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 
 #include <stdio.h>
+#include<string.h>
 #include "../stewart/stewart.h"
 #include "NRF24L01.h"
 #include "sh1106.h"
@@ -42,6 +43,7 @@
 //#define RF
 #define S_DEBUG
 //#define ESP
+//#define CAN
 
 
 /* USER CODE END PD */
@@ -54,6 +56,8 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
+
+CAN_HandleTypeDef hcan1;
 
 I2C_HandleTypeDef hi2c2;
 
@@ -72,6 +76,7 @@ uint16_t target_pot[6];
 uint8_t TxData[13];
 uint8_t home_btn = 0;
 uint8_t suction_btn = 0;
+uint8_t motor_en_state = 0;
 
 
 #ifdef S_DEBUG
@@ -96,6 +101,12 @@ uint8_t suction_btn = 0;
 	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
 #endif
 
+#ifdef CAN
+	CAN_TxHeaderTypeDef pTxHeader;
+	uint8_t CAN_TxData[8];
+	uint32_t TxMailbox;
+#endif
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,6 +117,7 @@ static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_CAN1_Init(void);
 /* USER CODE BEGIN PFP */
 
 void move_target_position(stewart* stewart);
@@ -114,6 +126,7 @@ void debug_platform(stewart* stewart, uint8_t output_type);
 uint16_t c_length_to_pot_value(float cylinder_length);
 void pack_data();
 void move_platform_home(stewart* st);
+void CAN_Pack_Send(void);
 
 
 /* USER CODE END PFP */
@@ -166,6 +179,7 @@ int main(void)
   MX_SPI1_Init();
   MX_I2C2_Init();
   MX_USART2_UART_Init();
+  MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
   adc_ready = 0;
 
@@ -180,6 +194,10 @@ int main(void)
   	  disp_init();
 #endif
 
+#ifdef CAN
+  	  HAL_CAN_Start(&hcan1);
+  	  HAL_CAN_WakeUp(&hcan1);
+#endif
 
   	  move_platform_home(&platform);
 
@@ -202,17 +220,21 @@ int main(void)
 		  joyrot_z = adc_raw_to_joystick(adc_raw[5]);
 
 		  adc_ready = 0;
-
 	  }
 
 	  home_btn = HAL_GPIO_ReadPin(Home_Button_GPIO_Port, Home_Button_Pin);
 	  suction_btn = HAL_GPIO_ReadPin(suction_enable_btn_GPIO_Port, suction_enable_btn_Pin);
 
 
+	  if ( HAL_GPIO_ReadPin(Motor_enable_GPIO_Port, Motor_enable_Pin) == 0) {
+		  motor_en_state = motor_en_state ^ 1;
+	  }
+
 
 	  if (home_btn == 0) {
 	 		  move_platform_home(&platform);
 	 	  }
+
 	  move_target_position(&platform);
 
 
@@ -239,7 +261,7 @@ int main(void)
 #ifdef I2C
 
 	  // sending commands via I2C
-	  if (HAL_I2C_Master_Transmit(&hi2c2, 0x00, TxData, sizeof(TxData), 200) == HAL_OK) {
+	  if (HAL_I2C_Master_Transmit(&hi2c2, 0x00, TxData, sizeof(TxData), 500) == HAL_OK) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
@@ -265,7 +287,7 @@ int main(void)
 
 
 #ifdef S_DEBUG
-	  debug_platform(&platform, target_pot_val);
+	  debug_platform(&platform, target_pos);
 #endif
 
 
@@ -441,6 +463,43 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief CAN1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CAN1_Init(void)
+{
+
+  /* USER CODE BEGIN CAN1_Init 0 */
+
+  /* USER CODE END CAN1_Init 0 */
+
+  /* USER CODE BEGIN CAN1_Init 1 */
+
+  /* USER CODE END CAN1_Init 1 */
+  hcan1.Instance = CAN1;
+  hcan1.Init.Prescaler = 15;
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
+  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_12TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;
+  hcan1.Init.TimeTriggeredMode = DISABLE;
+  hcan1.Init.AutoBusOff = DISABLE;
+  hcan1.Init.AutoWakeUp = DISABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
+  hcan1.Init.ReceiveFifoLocked = DISABLE;
+  hcan1.Init.TransmitFifoPriority = DISABLE;
+  if (HAL_CAN_Init(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CAN1_Init 2 */
+
+  /* USER CODE END CAN1_Init 2 */
+
+}
+
+/**
   * @brief I2C2 Initialization Function
   * @param None
   * @retval None
@@ -603,6 +662,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(suction_enable_btn_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : Motor_enable_Pin */
+  GPIO_InitStruct.Pin = Motor_enable_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Motor_enable_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : CE_Pin CSN_Pin */
   GPIO_InitStruct.Pin = CE_Pin|CSN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -619,7 +684,6 @@ static void MX_GPIO_Init(void)
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 	adc_ready = 1;
-
 
 }
 
@@ -680,17 +744,17 @@ float adc_raw_to_joystick(uint16_t adc_raw) {
 
 	float joy_val;
 
-	if (adc_raw >= 1900 && adc_raw <= 2100) {
+	if (adc_raw >= 1900 && adc_raw <= 2150) {
 		return 0;
 	}
 
 	else if (adc_raw > 2100) {
-		joy_val = (float) (adc_raw - 2100) / 1000;
+		joy_val = (float) (adc_raw - 2150) / 400;
 
 	}
 
 	else if (adc_raw <1900) {
-		joy_val = (float) (adc_raw - 1900)/ 1000;
+		joy_val = (float) (adc_raw - 1850)/ 400;
 
 	}
 	return joy_val;
@@ -743,7 +807,7 @@ uint16_t c_length_to_pot_value(float cylinder_length) {
 
 	uint16_t pot_val;
 
-	pot_val = (uint16_t) (cylinder_length - 400.00) * 13.6533;
+	pot_val = (uint16_t) (cylinder_length - 460.00) * 13.6533;
 
 	return pot_val;
 }
@@ -769,7 +833,7 @@ void pack_data(void) {
 	TxData[10] = (uint8_t) (target_pot[5] & 0xFF);
 	TxData[11] = (uint8_t) (target_pot[5] >> 8) & 0x0F;
 
-	TxData[12] = (uint8_t) suction_btn;
+	TxData[12] = (uint8_t) suction_btn | (motor_en_state << 1);
 
 }
 
@@ -785,7 +849,55 @@ void move_platform_home(stewart* st) {
 
 }
 
+#ifdef CAN
 
+
+void CAN_Pack_Send(void) {
+
+	pTxHeader.DLC = 8;
+	pTxHeader.IDE = CAN_ID_STD;
+	pTxHeader.StdId = 0;
+	pTxHeader.RTR = CAN_RTR_DATA;
+	pTxHeader.TransmitGlobalTime = DISABLE;
+
+
+	CAN_TxData[0] = (uint8_t) (target_pot[0] & 0xFF);
+	CAN_TxData[1] = (uint8_t) (target_pot[0] >> 8) & 0x0F;
+
+	CAN_TxData[2] = (uint8_t) (target_pot[1] & 0xFF);
+	CAN_TxData[3] = (uint8_t) (target_pot[1] >> 8) & 0x0F;
+
+	CAN_TxData[4] = (uint8_t) (target_pot[2] & 0xFF);
+	CAN_TxData[5] = (uint8_t) (target_pot[2] >> 8) & 0x0F;
+
+	CAN_TxData[6] = (uint8_t) (target_pot[3] & 0xFF);
+	CAN_TxData[7] = (uint8_t) (target_pot[3] >> 8) & 0x0F;
+
+	HAL_CAN_AddTxMessage(&hcan1, &pTxHeader, CAN_TxData, &TxMailbox);
+
+	memset(&CAN_TxData[0], 0, 8);
+
+	pTxHeader.DLC = 8;
+	pTxHeader.IDE = CAN_ID_STD;
+	pTxHeader.StdId = 1;
+	pTxHeader.RTR = CAN_RTR_DATA;
+	pTxHeader.TransmitGlobalTime = DISABLE;
+
+	CAN_TxData[0] = (uint8_t) (target_pot[4] & 0xFF);
+	CAN_TxData[1] = (uint8_t) (target_pot[4] >> 8) & 0x0F;
+
+	CAN_TxData[2] = (uint8_t) (target_pot[5] & 0xFF);
+	CAN_TxData[3] = (uint8_t) (target_pot[5] >> 8) & 0x0F;
+
+	CAN_TxData[4] = (uint8_t) suction_btn | (motor_en_state << 1);
+
+	HAL_CAN_AddTxMessage(&hcan1, &pTxHeader, CAN_TxData, &TxMailbox);
+
+
+}
+
+
+#endif
 
 /* USER CODE END 4 */
 

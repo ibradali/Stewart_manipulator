@@ -75,6 +75,8 @@ void Error_Handler(void);
 #define Home_Button_GPIO_Port GPIOC
 #define suction_enable_btn_Pin GPIO_PIN_9
 #define suction_enable_btn_GPIO_Port GPIOC
+#define Motor_enable_Pin GPIO_PIN_8
+#define Motor_enable_GPIO_Port GPIOA
 #define CE_Pin GPIO_PIN_4
 #define CE_GPIO_Port GPIOB
 #define CSN_Pin GPIO_PIN_5

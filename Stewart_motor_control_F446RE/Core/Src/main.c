@@ -36,6 +36,7 @@
 
 #define I2C
 //#define RF
+//#define CAN
 
 /* USER CODE END PD */
 
@@ -48,6 +49,8 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+CAN_HandleTypeDef hcan1;
+
 I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
@@ -59,15 +62,22 @@ TIM_HandleTypeDef htim2;
 
 
 uint8_t RxData[13];
-uint16_t adc_raw[6];
-uint16_t curr_pot[2][6];
+uint16_t adc_raw[12];
+uint16_t curr_pot[6];
 uint16_t target_pot[6];
 double i_e[6];
+double error[6];
 uint16_t mot_control_signal[6][3];
 
 uint8_t adc_ready;
 
 uint8_t suction_signal;
+uint8_t motor_en_signal;
+
+#ifdef CAN
+	CAN_RxHeaderTypeDef pRxHeader;
+	uint8_t CAN_RxData[8];
+#endif
 
 #ifdef RF
 	uint8_t RF_address[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
@@ -84,11 +94,18 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_CAN1_Init(void);
 /* USER CODE BEGIN PFP */
 
 void unpack_data(void);
 void speed_control(void);
 void control_motors(void);
+
+#ifdef CAN
+void CAN_Recieve_Unpack(void);
+void CAN_UnpackRxMessage(void);
+static void CAN_Filter_Config(void);
+#endif
 
 /* USER CODE END PFP */
 
@@ -132,6 +149,7 @@ int main(void)
   MX_TIM2_Init();
   MX_I2C1_Init();
   MX_SPI1_Init();
+  MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -142,14 +160,19 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
-  float alpha = 0.4;
-
 
 #ifdef RF
   	  NRF24_Init();
   	  NRF24_RxMode(RF_address, 1);
 #endif
 
+#ifdef CAN
+
+  	  CAN_Filter_Config();
+  	  HAL_CAN_Start(&hcan1);
+  	  HAL_CAN_WakeUp(&hcan1);
+  	  HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO1_MSG_PENDING);
+#endif
 
   /* USER CODE END 2 */
 
@@ -157,34 +180,24 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-	  HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adc_raw, 6);
+	  HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adc_raw, 12);
 
 	  // read and filter ADC values
 	  if (adc_ready) {
 
-		  curr_pot[0][0] = curr_pot[1][0];
-		  curr_pot[1][0] = alpha * adc_raw[0] + (1-alpha) * curr_pot[1][0];
+		  curr_pot[0] = (curr_pot[0] + adc_raw[0] + adc_raw[6]) / 3;
+		  curr_pot[1] = (curr_pot[1] + adc_raw[1] + adc_raw[7]) / 3;
+		  curr_pot[2] = (curr_pot[2] + adc_raw[2] + adc_raw[8]) / 3;
+		  curr_pot[3] = (curr_pot[3] + adc_raw[3] + adc_raw[9]) / 3;
+		  curr_pot[4] = (curr_pot[4] + adc_raw[4] + adc_raw[10]) / 3;
+		  curr_pot[5] = (curr_pot[5] + adc_raw[5] + adc_raw[11]) / 3;
 
-		  curr_pot[0][1] = curr_pot[1][1];
-		  curr_pot[1][1] = alpha * adc_raw[1] + (1-alpha) * curr_pot[1][1];
-
-		  curr_pot[0][2] = curr_pot[1][2];
-		  curr_pot[1][2] = alpha * adc_raw[2] + (1-alpha) * curr_pot[1][2];
-
-		  curr_pot[0][3] = curr_pot[1][3];
-		  curr_pot[1][3] = alpha * adc_raw[3] + (1-alpha) * curr_pot[1][3];
-
-		  curr_pot[0][4] = curr_pot[1][4];
-		  curr_pot[1][4] = alpha * adc_raw[4] + (1-alpha) * curr_pot[1][4];
-
-		  curr_pot[0][5] = curr_pot[1][5];
-		  curr_pot[1][5] = alpha * adc_raw[5] + (1-alpha) * curr_pot[1][5];
+		  adc_ready = 0;
 
 	  }
 
 #ifdef I2C
-	  if (HAL_I2C_Slave_Receive(&hi2c1, RxData, sizeof(RxData), 10) == HAL_OK) {
+	  if (HAL_I2C_Slave_Receive(&hi2c1, RxData, sizeof(RxData), 50) == HAL_OK) {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	  }
 
@@ -200,6 +213,12 @@ int main(void)
 
 	  unpack_data();
 
+#ifdef CAN
+
+	  CAN_Recieve_Unpack();
+
+#endif
+
 	  if (suction_signal == 1) {
 		  HAL_GPIO_WritePin(suction_enable_GPIO_Port, suction_enable_Pin, 1);
 	  }
@@ -210,7 +229,7 @@ int main(void)
 	  speed_control();
 	  control_motors();
 
-	  HAL_Delay(20);
+	  HAL_Delay(10);
 
 
 
@@ -306,7 +325,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 6;
   hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
@@ -316,7 +335,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_112CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -333,7 +352,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Channel = ADC_CHANNEL_7;
   sConfig.Rank = 3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -342,7 +361,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Channel = ADC_CHANNEL_10;
   sConfig.Rank = 4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -360,7 +379,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Channel = ADC_CHANNEL_11;
   sConfig.Rank = 6;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -369,6 +388,43 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief CAN1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CAN1_Init(void)
+{
+
+  /* USER CODE BEGIN CAN1_Init 0 */
+
+  /* USER CODE END CAN1_Init 0 */
+
+  /* USER CODE BEGIN CAN1_Init 1 */
+
+  /* USER CODE END CAN1_Init 1 */
+  hcan1.Instance = CAN1;
+  hcan1.Init.Prescaler = 15;
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
+  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_12TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;
+  hcan1.Init.TimeTriggeredMode = DISABLE;
+  hcan1.Init.AutoBusOff = DISABLE;
+  hcan1.Init.AutoWakeUp = DISABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
+  hcan1.Init.ReceiveFifoLocked = DISABLE;
+  hcan1.Init.TransmitFifoPriority = DISABLE;
+  if (HAL_CAN_Init(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CAN1_Init 2 */
+
+  /* USER CODE END CAN1_Init 2 */
 
 }
 
@@ -465,7 +521,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 180-1;
+  htim1.Init.Prescaler = 100-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 4096-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -551,7 +607,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 180-1;
+  htim2.Init.Prescaler = 50-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 4096-1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -700,7 +756,9 @@ void unpack_data(void) {
 	target_pot[5] = (uint16_t) RxData[10];
 	target_pot[5] |= (uint16_t) (RxData[11]<<8);
 
-	suction_signal = (uint8_t) RxData[12];
+	suction_signal = (uint8_t) RxData[12] & 0x01;
+	motor_en_signal = (uint8_t) (RxData[12] >> 1) & 0x01;
+
 
 
 }
@@ -712,46 +770,57 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 }
 
 
-
-
 void speed_control(void) {
 
 
 	int m_signal;
-	uint8_t p = 2;
-	double T_i = 1/10;
-	float elapsed_time = 0.02;
+	double p[6] = {24,24,24,24,24,24};
+	double T_i = 20;
+	double T_d = 15;
+	float elapsed_time = 0.01;
+	double error_curr;
+	double d_error;
 
 
 	for (int i=0; i<6;i++) {
 
-		if (i_e[i] > 4096) i_e[i] = 4096;
+		// error term
+		error_curr = target_pot[i] - curr_pot[i];
 
-		else if (i_e[i] < -4096) i_e[i] = -4096;
+		// derivative error
+		d_error = (error_curr - error[i]);
 
-		else if (i_e[i] >= -4096 && i_e[i] <=4096) {
+		// update error array
+		error[i] = error_curr;
 
-			i_e[i] += elapsed_time * (target_pot[i] - curr_pot[1][i]);
-		}
+		// integral error calculation and limiting wind up
+		i_e[i] += elapsed_time * error_curr;
+
+		if (T_i * i_e[i] > 4095) i_e[i] = 4095 / T_i;
+
+		else if (T_i * i_e[i] < -4095) i_e[i] = -4095 / T_i;
+
+		// motor control signal
+		m_signal = (int) p[i] * error_curr + T_i * i_e[i] + T_d * d_error;
+
+		// cap the motor PWM signal at max value
+		if (m_signal > 3500) m_signal = 3500;
+		else if (m_signal < -3500) m_signal = -3500;
 
 
-
-		m_signal = p * (target_pot[i] - curr_pot[1][i]) + T_i * i_e[i];
-
-		if (m_signal > 3) {
-			mot_control_signal[i][0] = m_signal;
+		if (m_signal > 0 && motor_en_signal == 1) {
+			mot_control_signal[i][0] =  m_signal;
 			mot_control_signal[i][1] = 1;
 			mot_control_signal[i][2] = 0;
 
 		}
-		else if (m_signal < -3) {
-			mot_control_signal[i][0] = -m_signal;
+		else if (m_signal < 0 && motor_en_signal == 1) {
+			mot_control_signal[i][0] = - m_signal;
 			mot_control_signal[i][1] = 0;
 			mot_control_signal[i][2] = 1;
-
 		}
 
-		else if (m_signal <= 3 && m_signal >=-3) {
+		else if (m_signal == 0 || motor_en_signal == 0) {
 			mot_control_signal[i][0] = 0;
 			mot_control_signal[i][1] = 0;
 			mot_control_signal[i][2] = 0;
@@ -791,10 +860,98 @@ void control_motors(void) {
 
 }
 
+#ifdef CAN
+
+void CAN_Recieve_Unpack(void) {
+
+	while (HAL_CAN_GetRxFifoFillLevel (&hcan1, CAN_RX_FIFO0) != 0)
+	  {
+		  HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &pRxHeader, RxData);
+		  CAN_UnpackRxMessage();
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  }
+
+
+	while (HAL_CAN_GetRxFifoFillLevel (&hcan1, CAN_RX_FIFO1) != 0)
+	  {
+		  HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO1, &pRxHeader, RxData);
+		  CAN_UnpackRxMessage();
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  }
+
+
+}
 
 
 
+void CAN_UnpackRxMessage(void) {
 
+	if (pRxHeader.StdId == 0) {
+		target_pot[0] = (uint16_t) CAN_RxData[0];
+		target_pot[0] |= (uint16_t) (CAN_RxData[1]<<8);
+
+		target_pot[1] = (uint16_t) CAN_RxData[2];
+		target_pot[1] |= (uint16_t) (CAN_RxData[3]<<8);
+
+		target_pot[2] = (uint16_t) CAN_RxData[4];
+		target_pot[2] |= (uint16_t) (CAN_RxData[5]<<8);
+
+		target_pot[3] = (uint16_t) CAN_RxData[6];
+		target_pot[3] |= (uint16_t) (CAN_RxData[7]<<8);
+
+	}
+
+	else if (pRxHeader.StdId == 1) {
+
+		target_pot[4] = (uint16_t) RxData[0];
+		target_pot[4] |= (uint16_t) (RxData[1]<<8);
+
+		target_pot[5] = (uint16_t) RxData[2];
+		target_pot[5] |= (uint16_t) (RxData[3]<<8);
+
+		suction_signal = (uint8_t) RxData[4] & 0x01;
+		motor_en_signal = (uint8_t) (RxData[5] >> 1) & 0x01;
+
+	}
+
+}
+
+static void CAN_Filter_Config(void) {
+
+	//TODO: Configure filter
+
+	CAN_FilterTypeDef sFilterConfig;
+
+	sFilterConfig.FilterActivation = ENABLE;
+
+	sFilterConfig.FilterBank = 0;
+
+	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+
+	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+
+	sFilterConfig.FilterIdHigh = 0x0000;
+
+	sFilterConfig.FilterIdLow = 0x0000;
+
+	sFilterConfig.FilterMaskIdHigh = 0x0000;
+
+	sFilterConfig.FilterMaskIdLow = 0x0000;
+
+	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+
+	if (HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig) != HAL_OK) {
+		Error_Handler();
+	}
+
+	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+
+	if (HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig) != HAL_OK) {
+		Error_Handler();
+	}
+}
+
+#endif
 
 /* USER CODE END 4 */
 
@@ -810,7 +967,9 @@ void Error_Handler(void)
   while (1)
   {
 	  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, 0);
-	  HAL_Delay(100);
+	  HAL_Delay(3000);
+
+	  NVIC_SystemReset();
   }
   /* USER CODE END Error_Handler_Debug */
 }
