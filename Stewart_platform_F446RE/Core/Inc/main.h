@@ -57,20 +57,26 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define joy_rot_z_Pin GPIO_PIN_0
+#define joy_rot_z_GPIO_Port GPIOC
 #define joy_x_Pin GPIO_PIN_0
 #define joy_x_GPIO_Port GPIOA
 #define joy_y_Pin GPIO_PIN_1
 #define joy_y_GPIO_Port GPIOA
-#define joy_z_Pin GPIO_PIN_2
+#define joy_z_Pin GPIO_PIN_4
 #define joy_z_GPIO_Port GPIOA
-#define joy_rot_x_Pin GPIO_PIN_3
-#define joy_rot_x_GPIO_Port GPIOA
-#define joy_rot_y_Pin GPIO_PIN_4
-#define joy_rot_y_GPIO_Port GPIOA
 #define LED_Pin GPIO_PIN_5
 #define LED_GPIO_Port GPIOA
-#define joy3_rot_z_Pin GPIO_PIN_0
-#define joy3_rot_z_GPIO_Port GPIOB
+#define joy_rot_x_Pin GPIO_PIN_0
+#define joy_rot_x_GPIO_Port GPIOB
+#define joy_rot_y_Pin GPIO_PIN_1
+#define joy_rot_y_GPIO_Port GPIOB
+#define Home_Button_Pin GPIO_PIN_8
+#define Home_Button_GPIO_Port GPIOC
+#define suction_enable_btn_Pin GPIO_PIN_9
+#define suction_enable_btn_GPIO_Port GPIOC
+#define Motor_enable_Pin GPIO_PIN_8
+#define Motor_enable_GPIO_Port GPIOA
 #define CE_Pin GPIO_PIN_4
 #define CE_GPIO_Port GPIOB
 #define CSN_Pin GPIO_PIN_5

@@ -19,6 +19,13 @@ void platform_init(stewart* stewart) {
     stewart->b5[0]=R*cos(deg_to_rad(300-beta/2)), stewart->b5[1]=R*sin(deg_to_rad(300-beta/2)), stewart->b5[2]=h;
     stewart->b6[0]=R*cos(deg_to_rad(300+beta/2)), stewart->b6[1]=R*sin(deg_to_rad(300+beta/2)), stewart->b6[2]=h;
 
+    stewart->tp_target_pos[0] = 0;
+    stewart->tp_target_pos[1] = 0;
+    stewart->tp_target_pos[2] = 0;
+    stewart->tp_target_pos[3] = 0;
+    stewart->tp_target_pos[4] = 0;
+    stewart->tp_target_pos[5] = 0;
+
 }
 
 

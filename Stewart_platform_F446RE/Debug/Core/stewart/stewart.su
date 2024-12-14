@@ -1,7 +1,7 @@
 ../Core/stewart/stewart.c:12:6:platform_init	16	static
-../Core/stewart/stewart.c:26:7:deg_to_rad	24	static
-../Core/stewart/stewart.c:32:6:rot_x	72	static
-../Core/stewart/stewart.c:55:6:rot_y	72	static
-../Core/stewart/stewart.c:77:6:rot_z	72	static
-../Core/stewart/stewart.c:99:6:rotate_platform	16	static
-../Core/stewart/stewart.c:115:6:run_platform	24	static
+../Core/stewart/stewart.c:33:7:deg_to_rad	24	static
+../Core/stewart/stewart.c:39:6:rot_x	72	static
+../Core/stewart/stewart.c:62:6:rot_y	72	static
+../Core/stewart/stewart.c:84:6:rot_z	72	static
+../Core/stewart/stewart.c:106:6:rotate_platform	16	static
+../Core/stewart/stewart.c:122:6:run_platform	24	static

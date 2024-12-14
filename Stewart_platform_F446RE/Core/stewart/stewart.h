@@ -7,9 +7,9 @@
 
 /*      Definitions     */
 
-#define R 300       // Base radius 
+#define R 300       // Base radius
 #define r 100       // platform radius
-#define h 400       // minimum height difference 
+#define h 500      // minimum height difference
 #define beta 10     // beta angle (deg)
 #define PI 3.14159265358979323846
 
